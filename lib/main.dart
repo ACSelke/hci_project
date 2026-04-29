@@ -456,13 +456,50 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ),
     );
   }
-
   Widget _buildVolumeOverlay() {
     return Center(
-      child: Container(
-        width: 150,
-        height: 800,
-        color: Colors.white.withOpacity(0.1),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            width: 150,
+            height: 800,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const SizedBox(height: 30),
+                const Icon(Icons.volume_up, size: 40),
+                Expanded(
+                  child: RotatedBox(
+                    quarterTurns: -1,
+                    child: SliderTheme(
+                      data: const SliderThemeData(
+                        trackHeight: 40,
+                        thumbShape:
+                            RoundSliderThumbShape(enabledThumbRadius: 40),
+                      ),
+                      child: Slider(
+                        value: _volume,
+                        onChanged: (value) {
+                          _player.setVolume(value);
+                          setState(() => _volume = value);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Icon(Icons.volume_off, size: 40),
+                const SizedBox(height: 30),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
