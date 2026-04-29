@@ -132,22 +132,46 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
             const SizedBox(height: 30),
 
-            // Song title
-            Text(
-              track.title.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Title + Artist
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        track.title.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        track.artist,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Car Button
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.directions_car,
+                    color: Colors.black,
+                    size: 28,
+                  ),
+                ),
+              ],
             ),
-
-            const SizedBox(height: 8),
-
-            Text(
-              track.artist,
-              style: const TextStyle(color: Colors.grey),
-            ),
-
             const SizedBox(height: 20),
 
             // Slider
@@ -158,7 +182,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child:SliderTheme(
                     data: SliderTheme.of(context).copyWith(
                       trackHeight: 15, 
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 17),
                       overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
                     ),
                     child: Slider(
