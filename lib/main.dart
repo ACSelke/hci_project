@@ -289,7 +289,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 30),
 
                 Icon(
                   Icons.volume_up,
@@ -304,7 +304,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       data: SliderThemeData(
                         trackHeight: 40,
                         thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 43),
+                            enabledThumbRadius: 40),
                       ),
                       child: Slider(
                         value: _volume,
@@ -322,7 +322,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   color: Colors.white,
                   size: 40,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 30),
               ],
             ),
           ),
