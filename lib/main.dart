@@ -30,11 +30,11 @@ class Track {
 
 class Clip {
   final String trackPath;
-
+  final String clipName;
   final Duration start;
   final Duration end;
 
-  Clip(this.trackPath, this.start, this.end);
+  Clip(this.clipName, this.trackPath, this.start, this.end);
 }
 
 class PlayerScreen extends StatefulWidget {
@@ -63,8 +63,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Duration _clipStart = Duration.zero;
   Duration _clipEnd = const Duration(seconds: 10);
+  String _clipName = "";
 
   Timer? _clipTimer;
+
+  final TextEditingController nameController = TextEditingController();
 
   @override
   void initState() {
@@ -148,6 +151,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text("Enter clip title"),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      hintText: "Clip name",
+                      filled: true,
+                      fillColor: Colors.white10,
+                    ),
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   Text("Start: ${format(tempStart)}"),
                   Slider(
                     value: tempStart.inSeconds
@@ -205,9 +218,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   onPressed: () {
                     if (tempEnd <= tempStart) return;
 
+                    final String name = nameController.text.trim();
+
                     setState(() {
                       _clipStart = tempStart;
                       _clipEnd = tempEnd;
+                      _clipName = name;
                     });
 
                     _saveClip();
@@ -230,7 +246,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final track = playlist[currentIndex];
 
     clips.add(
-      Clip(track.path, _clipStart, _clipEnd),
+      Clip(_clipName, track.path, _clipStart, _clipEnd),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -386,7 +402,7 @@ Future<void> playClip(Clip clip) async {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -419,7 +435,7 @@ Future<void> playClip(Clip clip) async {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 5),
 
           Expanded(
             child: clips.isEmpty
@@ -437,8 +453,9 @@ Future<void> playClip(Clip clip) async {
                       return Card(
                         color: Colors.grey[900],
                         child: ListTile(
+                          visualDensity: const VisualDensity(vertical: -4),
                           title: Text(
-                            "Clip ${index + 1}",
+                            clip.clipName,
                           ),
                           subtitle: Text(
                             "${format(clip.start)} → ${format(clip.end)}",
@@ -446,6 +463,7 @@ Future<void> playClip(Clip clip) async {
                           trailing: IconButton(
                             icon: const Icon(Icons.play_arrow),
                             onPressed: () => playClip(clip),
+                            iconSize: 30,
                           ),
                         ),
                       );
