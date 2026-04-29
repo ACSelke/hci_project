@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -27,6 +28,15 @@ class Track {
   Track(this.title, this.artist, this.path);
 }
 
+class Clip {
+  final String trackPath;
+
+  final Duration start;
+  final Duration end;
+
+  Clip(this.trackPath, this.start, this.end);
+}
+
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
 
@@ -42,12 +52,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
     Track("Under Pressure", "Queen", "assets/audio/under_pressure.mp3"),
   ];
 
+  final List<Clip> clips = [];
+
   int currentIndex = 0;
   Duration position = Duration.zero;
   Duration duration = Duration.zero;
 
   bool _showVolume = false;
   double _volume = 1.0;
+
+  Duration _clipStart = Duration.zero;
+  Duration _clipEnd = const Duration(seconds: 10);
+
+  Timer? _clipTimer;
 
   @override
   void initState() {
@@ -107,9 +124,141 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _clipTimer?.cancel();
     _player.dispose();
     super.dispose();
   }
+
+  void _openClipDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        Duration tempStart = _clipStart;
+        Duration tempEnd = _clipEnd;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final maxSeconds = duration.inSeconds.toDouble() > 0
+                ? duration.inSeconds.toDouble()
+                : 1.0;
+
+            return AlertDialog(
+              backgroundColor: Colors.black,
+              title: const Text("Create Clip"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Start: ${format(tempStart)}"),
+                  Slider(
+                    value: tempStart.inSeconds
+                        .toDouble()
+                        .clamp(0, maxSeconds),
+                    max: maxSeconds,
+                    onChanged: (v) {
+                      setDialogState(() {
+                        final newStart = Duration(seconds: v.toInt());
+
+                        // 🚫 prevent start going after end
+                        if (newStart >= tempEnd) {
+                          tempStart = tempEnd - const Duration(seconds: 1);
+                          if (tempStart < Duration.zero) {
+                            tempStart = Duration.zero;
+                          }
+                        } else {
+                          tempStart = newStart;
+                        }
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Text("End: ${format(tempEnd)}"),
+                  Slider(
+                    value: tempEnd.inSeconds
+                        .toDouble()
+                        .clamp(0, maxSeconds),
+                    max: maxSeconds,
+                    onChanged: (v) {
+                      setDialogState(() {
+                        final newEnd = Duration(seconds: v.toInt());
+
+                        // 🚫 prevent end going before start
+                        if (newEnd <= tempStart) {
+                          tempEnd = tempStart + const Duration(seconds: 1);
+
+                          if (tempEnd > duration) {
+                            tempEnd = duration;
+                          }
+                        } else {
+                          tempEnd = newEnd;
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // final safety check
+                    if (tempEnd <= tempStart) return;
+
+                    setState(() {
+                      _clipStart = tempStart;
+                      _clipEnd = tempEnd;
+                    });
+
+                    _saveClip();
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Save Clip"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
+  void _saveClip() {
+    if (_clipEnd <= _clipStart) return;
+
+    final track = playlist[currentIndex];
+
+    clips.add(
+      Clip(track.path, _clipStart, _clipEnd),
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Clip saved")),
+    );
+
+    setState(() {});
+  }
+
+  Future<void> playClip(Clip clip) async {
+    _clipTimer?.cancel();
+
+    await _player.setAsset(clip.trackPath);
+    await _player.seek(clip.start);
+    _player.play();
+
+    final clipLength = clip.end - clip.start;
+
+    _clipTimer = Timer(clipLength, () {
+      if (_player.playing) {
+        _player.pause();
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +277,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
           newVolume = newVolume.clamp(0.0, 1.0);
 
           _player.setVolume(newVolume);
-
           setState(() => _volume = newVolume);
         },
         onLongPressEnd: (_) {
@@ -144,6 +292,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     );
   }
 
+
   Widget _buildMainUI(Track track) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
@@ -155,7 +304,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Gray square
           Container(
             height: 400,
             width: 400,
@@ -167,9 +315,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 30),
 
-          // Title + Car button
+          // ================= TRACK INFO ROW =================
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
@@ -190,7 +337,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+
+              // ✂️ CLIP BUTTON
+              IconButton(
+                icon: const Icon(Icons.content_cut, size: 30),
+                onPressed: _openClipDialog,
+              ),
+
+              const SizedBox(width: 10),
+
+              // 🚗 CAR BUTTON
               Container(
                 width: 50,
                 height: 50,
@@ -209,26 +365,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 20),
 
-          // Slider
+          // ================= PROGRESS SLIDER =================
           Row(
             children: [
               Text(format(position)),
               Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 15,
-                    thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 17),
-                  ),
-                  child: Slider(
-                    value: position.inSeconds.toDouble(),
-                    max: duration.inSeconds.toDouble() > 0
-                        ? duration.inSeconds.toDouble()
-                        : 1,
-                    onChanged: (value) {
-                      _player.seek(Duration(seconds: value.toInt()));
-                    },
-                  ),
+                child: Slider(
+                  value: position.inSeconds.toDouble(),
+                  max: duration.inSeconds.toDouble() > 0
+                      ? duration.inSeconds.toDouble()
+                      : 1,
+                  onChanged: (value) {
+                    _player.seek(Duration(seconds: value.toInt()));
+                  },
                 ),
               ),
               Text(format(duration)),
@@ -237,7 +386,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 20),
 
-          // Controls
+          // ================= PLAY CONTROLS =================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -268,6 +417,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ),
             ],
           ),
+
+          const SizedBox(height: 20),
+
+          // ================= CLIP LIST =================
+          Expanded(
+            child: clips.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No clips yet",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: clips.length,
+                    itemBuilder: (context, index) {
+                      final clip = clips[index];
+
+                      return Card(
+                        color: Colors.grey[900],
+                        child: ListTile(
+                          title: Text(
+                            "Clip ${index + 1}",
+                          ),
+                          subtitle: Text(
+                            "${format(clip.start)} → ${format(clip.end)}",
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.play_arrow),
+                            onPressed: () => playClip(clip),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
         ],
       ),
     );
@@ -275,58 +459,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Widget _buildVolumeOverlay() {
     return Center(
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            width: 150,
-            height: 800,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const SizedBox(height: 30),
-
-                Icon(
-                  Icons.volume_up,
-                  color: Colors.white,
-                  size: 40
-                )
-                ,
-                Expanded(
-                  child: RotatedBox(
-                    quarterTurns: -1,
-                    child: SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 40,
-                        thumbShape: const RoundSliderThumbShape(
-                            enabledThumbRadius: 40),
-                      ),
-                      child: Slider(
-                        value: _volume,
-                        onChanged: (value) {
-                          _player.setVolume(value);
-                          setState(() => _volume = value);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Icon(
-                  Icons.volume_off,
-                  color: Colors.white,
-                  size: 40,
-                ),
-                const SizedBox(height: 30),
-              ],
-            ),
-          ),
-        ),
+      child: Container(
+        width: 150,
+        height: 800,
+        color: Colors.white.withOpacity(0.1),
       ),
     );
   }
