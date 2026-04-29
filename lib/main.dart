@@ -122,8 +122,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
             const SizedBox(height: 20),
 
             Container(
-              height: 260,
-              width: 260,
+              height: 400,
+              width: 400,
               decoration: BoxDecoration(
                 color: Colors.grey[800],
                 borderRadius: BorderRadius.circular(8),
@@ -155,14 +155,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
               children: [
                 Text(format(position)),
                 Expanded(
-                  child: Slider(
-                    value: position.inSeconds.toDouble(),
-                    max: duration.inSeconds.toDouble() > 0
-                        ? duration.inSeconds.toDouble()
-                        : 1,
-                    onChanged: (value) {
-                      _player.seek(Duration(seconds: value.toInt()));
-                    },
+                  child:SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 15, 
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+                    ),
+                    child: Slider(
+                      value: position.inSeconds.toDouble(),
+                      max: duration.inSeconds.toDouble() > 0
+                          ? duration.inSeconds.toDouble()
+                          : 1,
+                      onChanged: (value) {
+                        _player.seek(Duration(seconds: value.toInt()));
+                      },
+                    ),
                   ),
                 ),
                 Text(format(duration)),
@@ -175,21 +182,37 @@ class _PlayerScreenState extends State<PlayerScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                // Previous
                 IconButton(
-                  iconSize: 40,
                   icon: const Icon(Icons.skip_previous),
+                  iconSize: 80,
+                  color: Colors.white,
                   onPressed: previous,
                 ),
-                IconButton(
-                  iconSize: 80,
-                  icon: Icon(
-                    _player.playing ? Icons.pause : Icons.play_arrow,
+
+                // Big Play/Pause Button
+                GestureDetector(
+                  onTap: playPause,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white24,
+                    ),
+                    child: Icon(
+                      _player.playing ? Icons.pause : Icons.play_arrow,
+                      size: 100,
+                      color: Colors.white,
+                    ),
                   ),
-                  onPressed: playPause,
                 ),
+
+                // Next
                 IconButton(
-                  iconSize: 40,
                   icon: const Icon(Icons.skip_next),
+                  iconSize: 80,
+                  color: Colors.white,
                   onPressed: next,
                 ),
               ],
