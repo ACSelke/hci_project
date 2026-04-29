@@ -158,7 +158,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       setDialogState(() {
                         final newStart = Duration(seconds: v.toInt());
 
-                        // 🚫 prevent start going after end
                         if (newStart >= tempEnd) {
                           tempStart = tempEnd - const Duration(seconds: 1);
                           if (tempStart < Duration.zero) {
@@ -183,7 +182,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       setDialogState(() {
                         final newEnd = Duration(seconds: v.toInt());
 
-                        // 🚫 prevent end going before start
                         if (newEnd <= tempStart) {
                           tempEnd = tempStart + const Duration(seconds: 1);
 
@@ -205,7 +203,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // final safety check
                     if (tempEnd <= tempStart) return;
 
                     setState(() {
@@ -243,22 +240,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() {});
   }
 
-  Future<void> playClip(Clip clip) async {
-    _clipTimer?.cancel();
+Future<void> playClip(Clip clip) async {
 
-    await _player.setAsset(clip.trackPath);
-    await _player.seek(clip.start);
-    _player.play();
+  final index = playlist.indexWhere((t) => t.path == clip.trackPath);
 
-    final clipLength = clip.end - clip.start;
-
-    _clipTimer = Timer(clipLength, () {
-      if (_player.playing) {
-        _player.pause();
-      }
+  if (index != -1) {
+    setState(() {
+      currentIndex = index;
     });
+
+    await loadTrack();
   }
 
+  await _player.seek(clip.start);
+  _player.play();
+
+  _clipTimer?.cancel();
+
+  final clipLength = clip.end - clip.start;
+
+  _clipTimer = Timer(clipLength, () {
+    if (_player.playing) {
+      _player.pause();
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +321,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 30),
 
-          // ================= TRACK INFO ROW =================
           Row(
             children: [
               Expanded(
@@ -338,7 +343,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
 
-              // ✂️ CLIP BUTTON
               IconButton(
                 icon: const Icon(Icons.content_cut, size: 30),
                 onPressed: _openClipDialog,
@@ -346,7 +350,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
               const SizedBox(width: 10),
 
-              // 🚗 CAR BUTTON
               Container(
                 width: 50,
                 height: 50,
@@ -365,7 +368,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 20),
 
-          // ================= PROGRESS SLIDER =================
           Row(
             children: [
               Text(format(position)),
@@ -386,7 +388,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 20),
 
-          // ================= PLAY CONTROLS =================
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -420,7 +421,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
           const SizedBox(height: 20),
 
-          // ================= CLIP LIST =================
           Expanded(
             child: clips.isEmpty
                 ? const Center(
